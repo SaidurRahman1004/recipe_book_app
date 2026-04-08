@@ -5,4 +5,5 @@ abstract class RecipeRepository {
   Future<List<Recipe>> getRecipesOfTheWeek();
   Future<List<Recipe>> getRecipesByCategory(String category);
   Future<Recipe> getRecipeDetails(int id);
+  Future<String?> getRecipeVideo(String query);
 }

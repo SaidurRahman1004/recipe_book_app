@@ -53,4 +53,12 @@ class RecipeProvider extends ChangeNotifier {
       return null;
     }
   }
+
+  Future<String?> fetchRecipeVideo(String query) async {
+    try {
+      return await repository.getRecipeVideo(query);
+    } catch (e) {
+      return null;
+    }
+  }
 }

@@ -37,6 +37,45 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
     });
   }
 
+  void _watchVideo(BuildContext context) async {
+    if (recipe == null) return;
+
+    // First show a loading dialog or indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+
+    final provider = context.read<RecipeProvider>();
+    final videoUrl = await provider.fetchRecipeVideo(recipe!.title);
+
+    if (mounted) {
+      Navigator.pop(context); // Close loading
+
+      if (videoUrl != null && videoUrl.isNotEmpty) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => WebViewScreen(url: videoUrl)),
+        );
+      } else if (recipe!.sourceUrl != null && recipe!.sourceUrl!.isNotEmpty) {
+        // Fallback to source URL if no video found
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => WebViewScreen(url: recipe!.sourceUrl!),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Video or Source link not available')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -48,7 +87,12 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
     }
     if (recipe == null) {
       return Scaffold(
-        appBar: AppBar(),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
         body: const Center(child: Text("Error loading recipe details.")),
       );
     }
@@ -66,8 +110,9 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
             backgroundColor: Colors.white,
             leading: IconButton(
               icon: Container(
+                margin: const EdgeInsets.only(left: 8),
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
                 ),
@@ -82,8 +127,9 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
             actions: [
               IconButton(
                 icon: Container(
+                  margin: const EdgeInsets.only(right: 8),
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
                   ),
@@ -95,7 +141,6 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
                 ),
                 onPressed: () => savedProvider.toggleSave(recipe!),
               ),
-              const SizedBox(width: 16),
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: CachedNetworkImage(
@@ -167,8 +212,10 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
                       ),
                       _infoItem(
                         Icons.bar_chart,
-                        "Medium",
-                      ), // Hardcoded for matching UI simplicity
+                        recipe!.readyInMinutes > 40
+                            ? "Hard"
+                            : "Medium", // Slightly dynamic difficulty pseudo-logic
+                      ),
                       _infoItem(
                         Icons.local_fire_department_outlined,
                         "${recipe!.calories} Cal",
@@ -178,16 +225,23 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      const CircleAvatar(
+                      CircleAvatar(
                         radius: 12,
-                        backgroundImage: NetworkImage(
-                          'https://via.placeholder.com/150',
-                        ),
+                        backgroundColor: Colors.grey[300],
+                        child: const Icon(
+                          Icons.person,
+                          size: 16,
+                          color: Colors.white,
+                        ), // Replaced hardcoded image with dynamic fallback icon
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        recipe!.author,
-                        style: const TextStyle(color: AppColors.textSecondary),
+                      Expanded(
+                        child: Text(
+                          recipe!.author,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -238,6 +292,7 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
                               Text(
                                 "${ing.amount} ${ing.unit}",
                                 maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 10,
@@ -259,7 +314,7 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // Simple strip HTML tags
+                  // Using simplistic stripping to keep UI fast and avoid large plugin dependencies.
                   Text(
                     recipe!.description.replaceAll(
                       RegExp(r'<[^>]*>|&[^;]+;'),
@@ -281,24 +336,7 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      onPressed: () {
-                        if (recipe!.sourceUrl != null &&
-                            recipe!.sourceUrl!.isNotEmpty) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  WebViewScreen(url: recipe!.sourceUrl!),
-                            ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Video link not available'),
-                            ),
-                          );
-                        }
-                      },
+                      onPressed: () => _watchVideo(context),
                       icon: const Icon(
                         Icons.play_circle_fill,
                         color: Colors.white,

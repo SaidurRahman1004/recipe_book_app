@@ -7,6 +7,7 @@ import '../../domain/entities/recipe.dart';
 abstract class RecipeRemoteDataSource {
   Future<List<RecipeModel>> fetchComplexRecipes({int count = 5, String? type});
   Future<RecipeModel> fetchRecipeDetails(int id);
+  Future<String?> fetchRecipeVideo(String query);
 }
 
 class RecipeRemoteDataSourceImpl implements RecipeRemoteDataSource {
@@ -20,7 +21,7 @@ class RecipeRemoteDataSourceImpl implements RecipeRemoteDataSource {
     String? type,
   }) async {
     String url =
-        '${ApiConstants.baseUrl}/complexSearch?apiKey=${ApiConstants.apiKey}&number=$count&addRecipeInformation=true&addRecipeNutrition=true';
+        '${ApiConstants.baseUrl}/recipes/complexSearch?apiKey=${ApiConstants.apiKey}&number=$count&addRecipeInformation=true&addRecipeNutrition=true';
     if (type != null && type.isNotEmpty && type.toLowerCase() != 'all') {
       url += '&type=$type';
     }
@@ -43,7 +44,7 @@ class RecipeRemoteDataSourceImpl implements RecipeRemoteDataSource {
   @override
   Future<RecipeModel> fetchRecipeDetails(int id) async {
     final url =
-        '${ApiConstants.baseUrl}/$id/information?apiKey=${ApiConstants.apiKey}&includeNutrition=true';
+        '${ApiConstants.baseUrl}/recipes/$id/information?apiKey=${ApiConstants.apiKey}&includeNutrition=true';
     try {
       final response = await client.get(Uri.parse(url));
 
@@ -55,6 +56,26 @@ class RecipeRemoteDataSourceImpl implements RecipeRemoteDataSource {
       }
     } catch (e) {
       throw Exception('Network error: $e');
+    }
+  }
+
+  @override
+  Future<String?> fetchRecipeVideo(String query) async {
+    final url =
+        '${ApiConstants.baseUrl}/food/videos/search?apiKey=${ApiConstants.apiKey}&query=$query&number=1';
+    try {
+      final response = await client.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List videos = data['videos'] ?? [];
+        if (videos.isNotEmpty) {
+          final videoId = videos.first['youTubeId'];
+          return 'https://www.youtube.com/watch?v=$videoId';
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
     }
   }
 }

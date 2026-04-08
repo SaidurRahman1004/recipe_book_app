@@ -32,4 +32,9 @@ class RecipeRepositoryImpl implements RecipeRepository {
   Future<Recipe> getRecipeDetails(int id) async {
     return await remoteDataSource.fetchRecipeDetails(id);
   }
+
+  @override
+  Future<String?> getRecipeVideo(String query) async {
+    return await remoteDataSource.fetchRecipeVideo(query);
+  }
 }
